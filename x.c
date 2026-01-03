@@ -827,7 +827,7 @@ xloadcols(void)
 int
 xgetcolor(int x, unsigned char *r, unsigned char *g, unsigned char *b)
 {
-	if (!BETWEEN(x, 0, dc.collen))
+	if (!BETWEEN(x, 0, dc.collen - 1))
 		return 1;
 
 	*r = dc.col[x].color.red >> 8;
@@ -842,7 +842,7 @@ xsetcolorname(int x, const char *name)
 {
 	Color ncolor;
 
-	if (!BETWEEN(x, 0, dc.collen))
+	if (!BETWEEN(x, 0, dc.collen - 1))
 		return 1;
 
 	if (!xloadcolor(x, name, &ncolor))
@@ -1140,7 +1140,7 @@ xinit(int cols, int rows)
 {
 	XGCValues gcvalues;
 	Cursor cursor;
-	Window parent;
+	Window parent, root;
 	pid_t thispid = getpid();
 	XColor xmousefg, xmousebg;
 	XWindowAttributes attr;
@@ -1193,9 +1193,12 @@ xinit(int cols, int rows)
 			win.w, win.h, 0, xw.depth, InputOutput,
 			xw.vis, CWBackPixel | CWBorderPixel | CWBitGravity
 			| CWEventMask | CWColormap, &xw.attrs);
+	if (parent != root)
+		XReparentWindow(xw.dpy, xw.win, parent, xw.l, xw.t);
 
 	memset(&gcvalues, 0, sizeof(gcvalues));
 	gcvalues.graphics_exposures = False;
+
 	xw.buf = XCreatePixmap(xw.dpy, xw.win, win.w, win.h, xw.depth);
 	dc.gc = XCreateGC(xw.dpy, xw.buf, GCGraphicsExposures, &gcvalues);
 	XSetForeground(xw.dpy, dc.gc, dc.col[defaultbg].pixel);
@@ -1634,6 +1637,9 @@ xseticontitle(char *p)
 	XTextProperty prop;
 	DEFAULT(p, opt_title);
 
+	if (p[0] == '\0')
+		p = opt_title;
+
 	if (Xutf8TextListToTextProperty(xw.dpy, &p, 1, XUTF8StringStyle,
 	                                &prop) != Success)
 		return;
@@ -1647,6 +1653,9 @@ xsettitle(char *p)
 {
 	XTextProperty prop;
 	DEFAULT(p, opt_title);
+
+	if (p[0] == '\0')
+		p = opt_title;
 
 	if (Xutf8TextListToTextProperty(xw.dpy, &p, 1, XUTF8StringStyle,
 	                                &prop) != Success)
